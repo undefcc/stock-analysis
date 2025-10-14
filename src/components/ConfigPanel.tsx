@@ -1,7 +1,9 @@
 'use client'
 
-import { X, Settings, Clock, Tag, Trash2 } from 'lucide-react'
+import { X, Settings, Clock, Tag, Trash2, Loader2 } from 'lucide-react'
 import { StockSearchConfig, HigherThanHistoryConfig, AnalysisAlgorithm, SlidingWindowConfigHistory, HigherThanHistoryConfigHistory } from '@/lib/types'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { DEFAULT_STOCK_SEARCH_CONFIG } from '@/lib/slidingWindowAnalysis'
 import { DEFAULT_HIGHER_THAN_HISTORY_CONFIG } from '@/lib/algorithms/higherThanHistory'
 
@@ -26,6 +28,8 @@ interface ConfigPanelProps {
   setIsEditingTag: (id: string | null) => void
   currentTagValue: string
   setCurrentTagValue: (value: string) => void
+  isAnalyzing: boolean
+  analyzingAlgorithm: AnalysisAlgorithm | null
 }
 
 export default function ConfigPanel({
@@ -48,7 +52,9 @@ export default function ConfigPanel({
   isEditingTag,
   setIsEditingTag,
   currentTagValue,
-  setCurrentTagValue
+  setCurrentTagValue,
+  isAnalyzing,
+  analyzingAlgorithm
 }: ConfigPanelProps) {
   const currentHistory = activeAlgorithm === AnalysisAlgorithm.SlidingWindow 
     ? slidingWindowConfigHistory 
@@ -67,19 +73,21 @@ export default function ConfigPanel({
             </h3>
           </div>
           <div className="flex items-center space-x-2">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowConfigHistory(!showConfigHistory)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               title="配置历史"
             >
               <Clock className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowConfig(false)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
         
@@ -89,12 +97,18 @@ export default function ConfigPanel({
               config={tempSlidingWindowConfig}
               setConfig={setTempSlidingWindowConfig}
               onApply={applySlidingWindowConfig}
+              isAnalyzing={isAnalyzing}
+              analyzingAlgorithm={analyzingAlgorithm}
+              currentAlgorithm={activeAlgorithm}
             />
           ) : (
             <HigherThanHistoryConfigForm 
               config={tempHigherThanHistoryConfig}
               setConfig={setTempHigherThanHistoryConfig}
               onApply={applyHigherThanHistoryConfig}
+              isAnalyzing={isAnalyzing}
+              analyzingAlgorithm={analyzingAlgorithm}
+              currentAlgorithm={activeAlgorithm}
             />
           )}
         </div>
@@ -114,11 +128,11 @@ export default function ConfigPanel({
                       <div className="flex-1">
                         {isEditingTag === historyItem.id ? (
                           <div className="flex items-center space-x-2">
-                            <input
+                            <Input
                               type="text"
                               value={currentTagValue}
                               onChange={(e) => setCurrentTagValue(e.target.value)}
-                              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+                              className="flex-1 text-sm"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                   updateConfigHistoryTag(activeAlgorithm, historyItem.id, currentTagValue)
@@ -127,15 +141,15 @@ export default function ConfigPanel({
                               }}
                               autoFocus
                             />
-                            <button
+                            <Button
+                              size="sm"
                               onClick={() => {
                                 updateConfigHistoryTag(activeAlgorithm, historyItem.id, currentTagValue)
                                 setIsEditingTag(null)
                               }}
-                              className="text-xs bg-blue-500 text-white px-2 py-1 rounded"
                             >
                               保存
-                            </button>
+                            </Button>
                           </div>
                         ) : (
                           <div 
@@ -154,21 +168,24 @@ export default function ConfigPanel({
                         </p>
                       </div>
                       <div className="flex items-center space-x-1 ml-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => deleteConfigHistory(activeAlgorithm, historyItem.id)}
-                          className="p-1 text-gray-400 hover:text-red-500 rounded"
                           title="删除配置"
                         >
                           <Trash2 className="h-3 w-3" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => applyHistoryConfig(activeAlgorithm, historyItem.config)}
-                      className="mt-3 w-full py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-md text-sm hover:bg-blue-100 transition-colors"
+                      className="mt-3 w-full"
                     >
                       应用此配置
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -184,12 +201,19 @@ export default function ConfigPanel({
 function SlidingWindowConfigForm({ 
   config, 
   setConfig, 
-  onApply 
+  onApply,
+  isAnalyzing,
+  analyzingAlgorithm,
+  currentAlgorithm
 }: { 
   config: StockSearchConfig
   setConfig: (config: StockSearchConfig) => void
   onApply: () => void
+  isAnalyzing: boolean
+  analyzingAlgorithm: AnalysisAlgorithm | null
+  currentAlgorithm: AnalysisAlgorithm
 }) {
+  const isCurrentAlgorithmAnalyzing = isAnalyzing && analyzingAlgorithm === currentAlgorithm;
   return (
     <>
       <div>
@@ -197,10 +221,10 @@ function SlidingWindowConfigForm({
           滑动窗口大小
         </label>
         <div className="flex items-center">
-          <input
+          <Input
             type="number"
-            min="3"
-            max="15"
+            min={3}
+            max={15}
             value={config.windowSize}
             onChange={(e) => {
               const value = parseInt(e.target.value);
@@ -208,7 +232,6 @@ function SlidingWindowConfigForm({
                 setConfig({...config, windowSize: value});
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="ml-2 text-gray-500">天</span>
         </div>
@@ -222,11 +245,11 @@ function SlidingWindowConfigForm({
           搜索天数
         </label>
         <div className="flex items-center">
-          <input
+          <Input
             type="number"
-            min="50"
-            max="1000"
-            step="10"
+            min={50}
+            max={1000}
+            step={10}
             value={config.searchDays}
             onChange={(e) => {
               const value = parseInt(e.target.value);
@@ -234,7 +257,6 @@ function SlidingWindowConfigForm({
                 setConfig({...config, searchDays: value});
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="ml-2 text-gray-500">天</span>
         </div>
@@ -249,10 +271,10 @@ function SlidingWindowConfigForm({
             最小跌幅百分比
           </label>
           <div className="flex items-center">
-            <input
+            <Input
               type="number"
-              min="5"
-              max="50"
+              min={5}
+              max={50}
               value={config.minPriceDecreasePercent}
               onChange={(e) => {
                 const value = parseInt(e.target.value);
@@ -260,7 +282,6 @@ function SlidingWindowConfigForm({
                   setConfig({...config, minPriceDecreasePercent: value});
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="ml-2 text-gray-500">%</span>
           </div>
@@ -271,10 +292,10 @@ function SlidingWindowConfigForm({
             最大跌幅百分比
           </label>
           <div className="flex items-center">
-            <input
+            <Input
               type="number"
-              min="30"
-              max="100"
+              min={30}
+              max={100}
               value={config.maxPriceDecreasePercent}
               onChange={(e) => {
                 const value = parseInt(e.target.value);
@@ -282,7 +303,6 @@ function SlidingWindowConfigForm({
                   setConfig({...config, maxPriceDecreasePercent: value});
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
             <span className="ml-2 text-gray-500">%</span>
           </div>
@@ -294,11 +314,11 @@ function SlidingWindowConfigForm({
           成交量比例
         </label>
         <div className="flex items-center">
-          <input
+          <Input
             type="number"
-            min="1"
-            max="10"
-            step="0.5"
+            min={1}
+            max={10}
+            step={0.5}
             value={config.volumeRatio}
             onChange={(e) => {
               const value = parseFloat(e.target.value);
@@ -306,7 +326,6 @@ function SlidingWindowConfigForm({
                 setConfig({...config, volumeRatio: value});
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="ml-2 text-gray-500">倍</span>
         </div>
@@ -316,18 +335,20 @@ function SlidingWindowConfigForm({
       </div>
 
       <div className="pt-2 flex justify-between">
-        <button
+        <Button
+          variant="outline"
           onClick={() => setConfig({...DEFAULT_STOCK_SEARCH_CONFIG})}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          disabled={isCurrentAlgorithmAnalyzing}
         >
           重置为默认值
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onApply}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          disabled={isCurrentAlgorithmAnalyzing}
         >
+          {isCurrentAlgorithmAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           应用更改
-        </button>
+        </Button>
       </div>
     </>
   )
@@ -337,12 +358,19 @@ function SlidingWindowConfigForm({
 function HigherThanHistoryConfigForm({ 
   config, 
   setConfig, 
-  onApply 
+  onApply,
+  isAnalyzing,
+  analyzingAlgorithm,
+  currentAlgorithm
 }: { 
   config: HigherThanHistoryConfig
   setConfig: (config: HigherThanHistoryConfig) => void
   onApply: () => void
+  isAnalyzing: boolean
+  analyzingAlgorithm: AnalysisAlgorithm | null
+  currentAlgorithm: AnalysisAlgorithm
 }) {
+  const isCurrentAlgorithmAnalyzing = isAnalyzing && analyzingAlgorithm === currentAlgorithm;
   return (
     <>
       <div>
@@ -350,23 +378,21 @@ function HigherThanHistoryConfigForm({
           回看天数
         </label>
         <div className="flex items-center">
-          <input
+          <Input
             type="number"
-            min="10"
-            max="100"
+            min={1}
             value={config.lookbackDays}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               const value = parseInt(e.target.value);
-              if (value >= 10 && value <= 100) {
+              if (value >= 1) {
                 setConfig({...config, lookbackDays: value});
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="ml-2 text-gray-500">天</span>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          回看天数决定了分析历史数据的时间范围，默认为30天（10-100天）
+          回看天数决定了分析历史数据的时间范围，默认为10天（最小1天）
         </p>
       </div>
       
@@ -375,11 +401,11 @@ function HigherThanHistoryConfigForm({
           最小超过历史价格百分比
         </label>
         <div className="flex items-center">
-          <input
+          <Input
             type="number"
-            min="0.1"
-            max="10"
-            step="0.1"
+            min={0.1}
+            max={10}
+            step={0.1}
             value={config.minimumRange}
             onChange={(e) => {
               const value = parseFloat(e.target.value);
@@ -387,7 +413,6 @@ function HigherThanHistoryConfigForm({
                 setConfig({...config, minimumRange: value});
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="ml-2 text-gray-500">%</span>
         </div>
@@ -395,20 +420,118 @@ function HigherThanHistoryConfigForm({
           超过历史价格的最小百分比，默认为1%（0.1-10%）
         </p>
       </div>
+
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          最高最低价差值百分比限制
+        </label>
+        <div className="flex items-center">
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            value={config.maxPriceRangePercent}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              const value = parseFloat(e.target.value);
+              if (value >= 1 && value <= 100) {
+                setConfig({...config, maxPriceRangePercent: value});
+              }
+            }}
+          />
+          <span className="ml-2 text-gray-500">%</span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          控制所选时间范围内最高价与最低价的差值不超过此百分比，默认为20%（可编辑）
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          指定日期偏移
+        </label>
+        <div className="flex items-center">
+          <Input
+            type="number"
+            min={0}
+            max={30}
+            value={config.targetDateIndex || 0}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              const value = parseInt(e.target.value);
+              if (value >= 0 && value <= 30) {
+                setConfig({...config, targetDateIndex: value});
+              }
+            }}
+          />
+          <span className="ml-2 text-gray-500">天前</span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          指定分析日期（0表示当天，1表示前1天，默认为0）
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          与20日均线相差百分比
+        </label>
+        <div className="flex items-center">
+          <Input
+            type="number"
+            min={0}
+            step={0.1}
+            value={config.ma20DiffPercent}
+            onChange={(e) => {
+              const value = parseFloat(e.target.value);
+              if (value >= 0) {
+                setConfig({...config, ma20DiffPercent: value});
+              }
+            }}
+          />
+          <span className="ml-2 text-gray-500">%</span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          指定日期的价格与20日均线相差的最大百分比，默认为2%（最小0%）
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          20日均线连续高于历史天数
+        </label>
+        <div className="flex items-center">
+          <Input
+            type="number"
+            min={1}
+            max={10}
+            value={config.ma20ConsecutiveDays}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              const value = parseInt(e.target.value);
+              if (value >= 1 && value <= 10) {
+                setConfig({...config, ma20ConsecutiveDays: value});
+              }
+            }}
+          />
+          <span className="ml-2 text-gray-500">天</span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          指定日期前N天每天的20日均线都高于历史价格，默认为5天（1-10天）
+        </p>
+      </div>
       
       <div className="pt-2 flex justify-between">
-        <button
-          onClick={() => setConfig({...DEFAULT_HIGHER_THAN_HISTORY_CONFIG})}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+        <Button
+          variant="outline"
+          onClick={() => setConfig({ ...DEFAULT_HIGHER_THAN_HISTORY_CONFIG })}
+          disabled={isCurrentAlgorithmAnalyzing}
         >
           重置为默认值
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onApply}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          disabled={isCurrentAlgorithmAnalyzing}
         >
+          {isCurrentAlgorithmAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           应用更改
-        </button>
+        </Button>
       </div>
     </>
   )

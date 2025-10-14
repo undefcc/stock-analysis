@@ -2,12 +2,12 @@
 
 import { Search, TrendingDown, TrendingUp } from 'lucide-react'
 import { StockData } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface SearchHeaderProps {
   searchTerm: string
   setSearchTerm: (term: string) => void
-  sortBy: 'minPriceDate' | 'decreasePercent' | 'volumeRatio' | 'minPriceDayCount' | 'downDayCount'
-  setSortBy: (sort: 'minPriceDate' | 'decreasePercent' | 'volumeRatio' | 'minPriceDayCount' | 'downDayCount') => void
   currentFilteredData: StockData[]
   onExportStockCodes: () => void
   onExportCSV: () => void
@@ -16,8 +16,6 @@ interface SearchHeaderProps {
 export default function SearchHeader({
   searchTerm,
   setSearchTerm,
-  sortBy,
-  setSortBy,
   currentFilteredData,
   onExportStockCodes,
   onExportCSV
@@ -34,30 +32,14 @@ export default function SearchHeader({
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         {/* 搜索框 */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
             type="text"
             placeholder="搜索股票代码或名称"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="pl-10"
           />
-        </div>
-        
-        {/* 排序选择 */}
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-gray-700">排序:</label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="minPriceDate">最低价日期</option>
-            <option value="decreasePercent">跌幅百分比</option>
-            <option value="volumeRatio">成交量比例</option>
-            <option value="minPriceDayCount">距今天数</option>
-            <option value="downDayCount">下跌天数</option>
-          </select>
         </div>
       </div>
       
@@ -79,18 +61,19 @@ export default function SearchHeader({
         {/* 导出按钮 */}
         {currentFilteredData.length > 0 && (
           <div className="flex space-x-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onExportStockCodes}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               导出股票代码
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               onClick={onExportCSV}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
             >
               导出CSV
-            </button>
+            </Button>
           </div>
         )}
       </div>

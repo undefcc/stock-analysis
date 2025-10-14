@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart3 } from 'lucide-react'
 import StockTable from './StockTable'
+import AnalysisLoading from './AnalysisLoading'
 import { StockData, AnalysisAlgorithm } from '@/lib/types'
 
 interface AlgorithmTabsProps {
@@ -15,6 +16,10 @@ interface AlgorithmTabsProps {
   showUpload: boolean
   setShowConfig: (show: boolean) => void
   setShowConfigHistory: (show: boolean) => void
+  sortBy: 'minPriceDate' | 'decreasePercent' | 'volumeRatio' | 'minPriceDayCount' | 'downDayCount'
+  setSortBy: (sort: 'minPriceDate' | 'decreasePercent' | 'volumeRatio' | 'minPriceDayCount' | 'downDayCount') => void
+  isAnalyzing: boolean
+  analyzingAlgorithm: AnalysisAlgorithm | null
 }
 
 export default function AlgorithmTabs({
@@ -26,7 +31,11 @@ export default function AlgorithmTabs({
   filteredHigherThanHistoryData,
   showUpload,
   setShowConfig,
-  setShowConfigHistory
+  setShowConfigHistory,
+  sortBy,
+  setSortBy,
+  isAnalyzing,
+  analyzingAlgorithm
 }: AlgorithmTabsProps) {
   return (
     <div className="p-2">
@@ -47,8 +56,14 @@ export default function AlgorithmTabs({
         </TabsList>
         
         <TabsContent value={AnalysisAlgorithm.SlidingWindow}>
-          {slidingWindowData.length > 0 ? (
-            <StockTable data={filteredSlidingWindowData} />
+          {isAnalyzing && analyzingAlgorithm === AnalysisAlgorithm.SlidingWindow ? (
+            <AnalysisLoading isAnalyzing={isAnalyzing} analyzingAlgorithm={analyzingAlgorithm} />
+          ) : slidingWindowData.length > 0 ? (
+            <StockTable 
+              data={filteredSlidingWindowData} 
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
           ) : (
             <div className="px-6 py-12 text-center">
               <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
@@ -61,8 +76,14 @@ export default function AlgorithmTabs({
         </TabsContent>
         
         <TabsContent value={AnalysisAlgorithm.HigherThanHistory}>
-          {higherThanHistoryData.length > 0 ? (
-            <StockTable data={filteredHigherThanHistoryData} />
+          {isAnalyzing && analyzingAlgorithm === AnalysisAlgorithm.HigherThanHistory ? (
+            <AnalysisLoading isAnalyzing={isAnalyzing} analyzingAlgorithm={analyzingAlgorithm} />
+          ) : higherThanHistoryData.length > 0 ? (
+            <StockTable 
+              data={filteredHigherThanHistoryData}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
           ) : (
             <div className="px-6 py-12 text-center">
               <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />

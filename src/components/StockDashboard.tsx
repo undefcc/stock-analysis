@@ -1,13 +1,17 @@
 'use client'
 
-import { Calendar, Upload as UploadIcon, Database, Settings, Download } from 'lucide-react'
+import { Calendar, Upload as UploadIcon, Database, Settings, Download, Loader2 } from 'lucide-react'
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import StockChart from './StockChart'
 import FileUpload from './FileUpload'
 import SearchHeader from './SearchHeader'
 import AlgorithmTabs from './AlgorithmTabs'
 import ConfigPanel from './ConfigPanel'
 import DatasetManager from './DatasetManager'
+import AnalysisLoading from './AnalysisLoading'
 import { StockDataProvider, useStockData } from './StockDataProvider'
 import { AnalysisAlgorithm } from '@/lib/types'
 
@@ -40,6 +44,10 @@ function StockDashboardContent() {
     setDatasets,
     currentDatasetId,
     dataSource,
+    
+    // 算法loading状态
+    isAnalyzing,
+    analyzingAlgorithm,
     
     // 配置相关
     tempSlidingWindowConfig,
@@ -131,9 +139,9 @@ function StockDashboardContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载中...</p>
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">加载中...</p>
         </div>
       </div>
     )
@@ -141,19 +149,6 @@ function StockDashboardContent() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* 处理中状态指示器 */}
-      {isProcessing && (
-        <div className="fixed top-0 left-0 right-0 flex flex-col items-center justify-center bg-blue-600 text-white py-3 z-40">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-            <span className="font-medium">正在处理股票数据...</span>
-          </div>
-          <div className="mt-2 w-64 bg-blue-700 rounded-full h-2">
-            <Progress id="processing-progress" value={0} className="h-2" />
-          </div>
-          <div id="processing-status" className="mt-1 text-sm opacity-90"></div>
-        </div>
-      )}
 
       {/* 标题栏 */}
       <div className="mb-8">
@@ -167,32 +162,32 @@ function StockDashboardContent() {
           
           {/* 工具栏 */}
           <div className="flex items-center space-x-2">
-            <button
+            <Button
               onClick={() => setShowUpload(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              className="shadow-sm"
             >
               <UploadIcon className="h-4 w-4 mr-2" />
               上传文件
-            </button>
+            </Button>
             
-            <button
+            <Button
+              variant="outline"
               onClick={() => setShowDatasets(true)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               <Database className="h-4 w-4 mr-2" />
               {dataSource === 'dataset' && currentDatasetId
                 ? datasets.find(d => d.id === currentDatasetId)?.name || '已保存数据集'
                 : '我的数据集'
               }
-            </button>
+            </Button>
             
-            <button
+            <Button
+              variant="outline"
               onClick={() => setShowConfig(true)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               <Settings className="h-4 w-4 mr-2" />
               算法配置
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -201,8 +196,6 @@ function StockDashboardContent() {
       <SearchHeader
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
         currentFilteredData={currentFilteredData}
         onExportStockCodes={handleExportStockCodes}
         onExportCSV={handleExportCSV}
@@ -220,6 +213,10 @@ function StockDashboardContent() {
           showUpload={showUpload}
           setShowConfig={setShowConfig}
           setShowConfigHistory={setShowConfigHistory}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          isAnalyzing={isAnalyzing}
+          analyzingAlgorithm={analyzingAlgorithm}
         />
       </div>
 
@@ -232,12 +229,15 @@ function StockDashboardContent() {
       )}
 
       {/* 文件上传组件 */}
-      {showUpload && (
-        <FileUpload
-          onFilesProcessed={handleFileProcessComplete}
-          isProcessing={isProcessing}
-        />
-      )}
+      <FileUpload
+        open={showUpload}
+        onFilesProcessed={handleFileProcessComplete}
+        onClose={() => setShowUpload(false)}
+        onProgressUpdate={(progress, status) => {
+          console.log('Progress update received:', progress, status)
+          // FileUpload 有自己的进度条，这里的回调主要用于调试
+        }}
+      />
 
       {/* 配置面板 */}
       <ConfigPanel
@@ -261,6 +261,8 @@ function StockDashboardContent() {
         setIsEditingTag={setIsEditingTag}
         currentTagValue={currentTagValue}
         setCurrentTagValue={setCurrentTagValue}
+        isAnalyzing={isAnalyzing}
+        analyzingAlgorithm={analyzingAlgorithm}
       />
 
       {/* 数据集管理器 */}

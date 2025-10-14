@@ -73,6 +73,16 @@ interface StockDataContextType {
   loading: boolean
   setLoading: (loading: boolean) => void
   
+  // 算法loading状态
+  isAnalyzing: boolean
+  analyzingAlgorithm: AnalysisAlgorithm | null
+  
+  // 进度状态
+  processingProgress: number
+  setProcessingProgress: (progress: number) => void
+  processingStatus: string
+  setProcessingStatus: (status: string) => void
+  
   // 方法
   applySlidingWindowConfig: () => void
   applyHigherThanHistoryConfig: () => void
@@ -134,6 +144,14 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   const [showUpload, setShowUpload] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [loading, setLoading] = useState(true)
+  
+  // 算法loading状态
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analyzingAlgorithm, setAnalyzingAlgorithm] = useState<AnalysisAlgorithm | null>(null)
+  
+  // 进度状态
+  const [processingProgress, setProcessingProgress] = useState(0)
+  const [processingStatus, setProcessingStatus] = useState('')
 
   // 计算过滤后的数据
   const filteredSlidingWindowData = slidingWindowData
@@ -181,32 +199,39 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   // 数据集分析方法
   const handleAnalyzeDataset = useCallback(async (datasetId: string) => {
     try {
-      setIsProcessing(true)
+      setIsAnalyzing(true);
+      setAnalyzingAlgorithm(activeAlgorithm);
+      setIsProcessing(true);
       
       // 获取原始数据
-      const rawData = await getRawStockDataByDatasetId(datasetId)
+      const rawData = await getRawStockDataByDatasetId(datasetId);
       
       if (rawData.length === 0) {
-        console.warn('没有找到数据集的原始数据:', datasetId)
-        return
+        console.warn('没有找到数据集的原始数据:', datasetId);
+        return;
       }
+      
+      // 模拟延迟，让用户看到loading状态
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // 根据当前活跃算法进行分析
       if (activeAlgorithm === AnalysisAlgorithm.SlidingWindow) {
-        const results = batchAnalyzeSlidingWindow(rawData, slidingWindowConfig)
-        setSlidingWindowData(results)
+        const results = batchAnalyzeSlidingWindow(rawData, slidingWindowConfig);
+        setSlidingWindowData(results);
       } else {
-        const results = batchAnalyzeHigherThanHistory(rawData, higherThanHistoryConfig)
-        setHigherThanHistoryData(results)
+        const results = batchAnalyzeHigherThanHistory(rawData, higherThanHistoryConfig);
+        setHigherThanHistoryData(results);
       }
       
-      console.log('数据集分析完成:', datasetId)
+      console.log('数据集分析完成:', datasetId);
     } catch (error) {
-      console.error('分析数据集失败:', error)
+      console.error('分析数据集失败:', error);
     } finally {
-      setIsProcessing(false)
+      setIsAnalyzing(false);
+      setAnalyzingAlgorithm(null);
+      setIsProcessing(false);
     }
-  }, [activeAlgorithm, slidingWindowConfig, higherThanHistoryConfig])
+  }, [activeAlgorithm, slidingWindowConfig, higherThanHistoryConfig]);
 
   // 加载配置历史记录和数据集
   useEffect(() => {
@@ -373,7 +398,7 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
     setDataSource('dataset')
     setShowDatasets(false)
     
-    // 选择数据集后立即进行分析
+    // 用户主动选择数据集时显示进度条
     await handleAnalyzeDataset(datasetId)
   }
 
@@ -395,9 +420,80 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   }
 
   const handleFileProcessComplete = async (data: { rawData: any[]; analysisResults: any[] }, saveAsDataset?: boolean, datasetName?: string) => {
-    // 文件处理完成逻辑
-    console.log('File processing complete:', data, saveAsDataset, datasetName)
-  }
+    try {
+      setIsProcessing(true);
+      // 不要重置进度，让FileUpload组件控制进度
+      setProcessingStatus('正在处理数据...');
+      
+      if (saveAsDataset && data.rawData.length > 0) {
+        // 如果没有提供数据集名称，使用默认名称
+        const finalDatasetName = datasetName || `数据集 ${new Date().toLocaleString('zh-CN')}`;
+        // 保存为数据集
+        const datasetId = await saveDataset(finalDatasetName, {
+          processedData: data.analysisResults || [],
+          rawData: data.rawData
+        });
+        
+        // 更新数据集列表
+        const updatedDatasets = await getDatasets();
+        setDatasets(updatedDatasets);
+        
+        // 选择新创建的数据集
+        setCurrentDatasetId(datasetId);
+        setDataSource('dataset');
+        
+        // 分析新数据集（保存数据集后不再显示进度条，避免与文件上传进度条冲突）
+        // 直接分析数据而不显示进度条
+        const rawData = await getRawStockDataByDatasetId(datasetId);
+        if (rawData.length > 0) {
+          setIsAnalyzing(true);
+          setAnalyzingAlgorithm(activeAlgorithm);
+          
+          if (activeAlgorithm === AnalysisAlgorithm.SlidingWindow) {
+            const results = batchAnalyzeSlidingWindow(rawData, slidingWindowConfig);
+            setSlidingWindowData(results);
+          } else {
+            const results = batchAnalyzeHigherThanHistory(rawData, higherThanHistoryConfig);
+            setHigherThanHistoryData(results);
+          }
+          
+          setIsAnalyzing(false);
+          setAnalyzingAlgorithm(null);
+        }
+      } else {
+        // 直接使用上传的数据
+        if (data.rawData.length > 0) {
+          setIsAnalyzing(true);
+          setAnalyzingAlgorithm(activeAlgorithm);
+          
+          // 根据当前算法分析数据
+          if (activeAlgorithm === AnalysisAlgorithm.SlidingWindow) {
+            const results = batchAnalyzeSlidingWindow(data.rawData, slidingWindowConfig);
+            setSlidingWindowData(results);
+          } else {
+            const results = batchAnalyzeHigherThanHistory(data.rawData, higherThanHistoryConfig);
+            setHigherThanHistoryData(results);
+          }
+          
+          setIsAnalyzing(false);
+          setAnalyzingAlgorithm(null);
+          setDataSource('uploaded');
+        }
+      }
+      
+      setShowUpload(false);
+    } catch (error) {
+      console.error('文件处理失败:', error);
+      alert(`文件处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      // 延迟一下让用户看到100%的进度
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingProgress(0);
+        setProcessingStatus('');
+      }, 1000);
+    }
+  };
 
   const value: StockDataContextType = {
     // 算法和数据状态
@@ -458,6 +554,16 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
     setIsProcessing,
     loading,
     setLoading,
+    
+    // 算法loading状态
+    isAnalyzing,
+    analyzingAlgorithm,
+    
+    // 进度状态
+    processingProgress,
+    setProcessingProgress,
+    processingStatus,
+    setProcessingStatus,
     
     // 方法
     applySlidingWindowConfig,

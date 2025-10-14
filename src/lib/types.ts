@@ -67,9 +67,24 @@ export type SlidingWindowConfigHistory = ConfigHistoryItem<StockSearchConfig>;
 
 // 高于历史区间配置
 export interface HigherThanHistoryConfig {
-  lookbackDays: number;   // 回看天数 (默认30天)
+  lookbackDays: number;   // 回看天数 (默认10天)
   minimumRange: number;   // 最小超过历史价格的百分比 (默认1%)
+  maxPriceRangePercent: number; // 时间范围内最高最低价差值百分比限制 (默认20%)
+  targetDateIndex?: number; // 指定日期的索引（从最新开始，0表示当天，默认为0）
+  ma20DiffPercent: number; // 与20日均线相差百分比 (默认2%)
+  ma20ConsecutiveDays: number; // 前N天每天的20日均线都高于历史 (默认5天)
 }
 
 // 高于历史区间算法配置历史
 export type HigherThanHistoryConfigHistory = ConfigHistoryItem<HigherThanHistoryConfig>;
+
+// 最大跌幅算法配置
+export interface MaxDecreaseConfig {
+  minSearchDays: number;      // 最小搜索天数 (默认30天)
+  maxSearchDays: number;      // 最大搜索天数 (默认180天)
+  minDecreasePercent: number; // 最小跌幅百分比阈值 (默认15%)
+  consecutiveDownDays: number; // 连续下跌天数 (默认3天)
+}
+
+// 最大跌幅算法配置历史
+export type MaxDecreaseConfigHistory = ConfigHistoryItem<MaxDecreaseConfig>;
