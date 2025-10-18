@@ -138,7 +138,7 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   const [datasets, setDatasets] = useState<DatasetInfo[]>([])
   const [currentDatasetId, setCurrentDatasetId] = useState<string>('')
   const [showDatasets, setShowDatasets] = useState(false)
-  const [dataSource, setDataSource] = useState<'mock' | 'uploaded' | 'dataset'>('dataset')
+  const [dataSource, setDataSource] = useState<'mock' | 'uploaded' | 'dataset'>('uploaded')
   
   // UI状态
   const [showUpload, setShowUpload] = useState(false)
@@ -199,12 +199,14 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   // 数据集分析方法
   const handleAnalyzeDataset = useCallback(async (datasetId: string) => {
     try {
+      console.log('开始分析数据集:', datasetId);
       setIsAnalyzing(true);
       setAnalyzingAlgorithm(activeAlgorithm);
       setIsProcessing(true);
       
       // 获取原始数据
       const rawData = await getRawStockDataByDatasetId(datasetId);
+      console.log('获取到原始数据条数:', rawData.length);
       
       if (rawData.length === 0) {
         console.warn('没有找到数据集的原始数据:', datasetId);
@@ -216,10 +218,14 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
       
       // 根据当前活跃算法进行分析
       if (activeAlgorithm === AnalysisAlgorithm.SlidingWindow) {
+        console.log('使用滑动窗口算法分析');
         const results = batchAnalyzeSlidingWindow(rawData, slidingWindowConfig);
+        console.log('滑动窗口分析结果:', results.length);
         setSlidingWindowData(results);
       } else {
+        console.log('使用高于历史区间算法分析');
         const results = batchAnalyzeHigherThanHistory(rawData, higherThanHistoryConfig);
+        console.log('高于历史区间分析结果:', results.length);
         setHigherThanHistoryData(results);
       }
       
@@ -236,6 +242,7 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
   // 加载配置历史记录和数据集
   useEffect(() => {
     const initializeData = async () => {
+      console.log('开始初始化应用数据');
       const loadConfigHistory = () => {
         try {
           const slidingWindowHistory = localStorage.getItem('slidingWindowConfigHistory');
@@ -247,6 +254,7 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
           if (higherThanHistoryHistory) {
             setHigherThanHistoryConfigHistory(JSON.parse(higherThanHistoryHistory));
           }
+          console.log('配置历史加载完成');
         } catch (error) {
           console.error('加载配置历史记录失败:', error);
         }
@@ -254,30 +262,38 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
       
       const loadDatasets = async () => {
         try {
+          console.log('开始加载数据集');
           const datasetList = await getDatasets();
+          console.log('找到数据集数量:', datasetList.length);
           setDatasets(datasetList);
           
           // 如果有数据集且没有选择当前数据集，自动选择第一个
           if (datasetList.length > 0 && !currentDatasetId) {
             const firstDatasetId = datasetList[0].id;
+            console.log('自动选择第一个数据集:', firstDatasetId);
             setCurrentDatasetId(firstDatasetId);
             setDataSource('dataset');
+          } else if (datasetList.length === 0) {
+            // 如果没有数据集，设置为上传模式
+            console.log('没有数据集，设置为上传模式');
+            setDataSource('uploaded');
           }
         } catch (error) {
           console.error('加载数据集失败:', error);
+          // 出错时也设置为上传模式
+          setDataSource('uploaded');
         }
       };
       
       loadConfigHistory();
       await loadDatasets();
       // 初始化完成，设置 loading 为 false
+      console.log('应用初始化完成');
       setLoading(false);
     };
-    
-    initializeData();
-  }, [currentDatasetId]);
 
-  // 打开配置面板时更新临时配置
+    initializeData();
+  }, []); // 只在组件挂载时执行一次  // 打开配置面板时更新临时配置
   useEffect(() => {
     if (showConfig) {
       setTempSlidingWindowConfig({...slidingWindowConfig});
@@ -287,7 +303,9 @@ export function StockDataProvider({ children }: StockDataProviderProps) {
 
   // 当数据集改变时自动分析
   useEffect(() => {
+    console.log('数据集状态变化:', { currentDatasetId, dataSource });
     if (currentDatasetId && dataSource === 'dataset') {
+      console.log('触发自动分析数据集:', currentDatasetId);
       handleAnalyzeDataset(currentDatasetId);
     }
   }, [currentDatasetId, dataSource, handleAnalyzeDataset]);
